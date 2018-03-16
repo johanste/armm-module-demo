@@ -1,0 +1,3 @@
+{
+    VirtualMachineScaleSet: import './virtualMachineScaleSet.libsonnet'
+}
