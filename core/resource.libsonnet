@@ -1,3 +1,5 @@
+local core = import 'module.libsonnet';
+
 {
     id:: "[resourceId('%s', '%s')]" % [ self.type, self.name ],
     type: error "resource must have a 'type' property",
@@ -8,7 +10,7 @@
     dependsOn:[],
     tags: {},
     withDependency(resourceOrId)::
-        if std.type(resourceOrId) == 'object' then 
+        if core.isResource(resourceOrId) then 
             self {
                 dependsOn +: [ resourceOrId.id ]
             }
