@@ -1,48 +1,19 @@
-local network = import 'network/module.libsonnet';
-local compute = import 'compute/module.libsonnet';
+local network = {
+    LoadBalancer: import 'network/LoadBalancer/module.libsonnet',
+    PublicIpAddress: import 'network/PublicIpAddress/module.libsonnet',
+    VirtualNetwork: import 'network/VirtualNetwork/module.libsonnet',
+};
+local compute = {
+    VirtualMachineScaleSet: import 'compute/VirtualMachineScaleSet/module.libsonnet'
+};
+
+local core = import 'core/module.libsonnet';
+local stdex = core.stdex;
 
 {
-    // Required parameters are broken out to a separate set to 
-    // allow the use ot error constructs. The use of std.mergePatch
-    // to allow for partial overrides of complete parameters caused the whole
-    // parameters set to be materialized, which prematurely triggered any 
-    // error clauses within the parameters.
-    local requiredParameters = {
-        name: error "'name' is a required parameter",
-        imageReference: error "'imageReference' is a required parameter",
-        adminUserName: error "'adminUserName' is a required parameter", // CLI is using current user's user name by default...
-        location: error "'location' is a required parameter", // CLI is using resource group's location by default. We could consider doing so as well...        
-    },
- 
-    local parameters = requiredParameters + std.mergePatch({
-        disableOverprovision: false, 
-        instanceCount: 2,
-        upgradePolicy: 'manual', 
-        adminPassword: null,
-        authenticationType: if self.osType == 'Windows' then 'rdp' else 'ssh',
-        vmSku: 'Standard_D1_v2', 
-        sshPublicKeys: [],
-        loadBalancer: null, // { sku: null },
-        virtualNetwork: null,
-        applicationGateway: null, // { subnetPrefix: null, sku: 'Standard_Large', capacity: 10 }, // ISSUE: How to provide defaults for optional parameters
-        backendPoolName: null,
-        natPoolName: null,
-        backendPort: null,
-        publicIpAllocationMethod: 'dynamic',
-        dataDisks: [], 
-        osType: null, // error "'osType' is a required parameters",
-        subnet: null,
-        customData: null,
-        licenseType: null,
-        singlePlacementGroup: self.instanceCount <= 100,
-        publicIpAddress: null,
-        publicIpAddressDnsName: null,
-        publicIpAddressPerVm: false,
-        zones: [], 
-        dataDiskSizes: [],
-        dataDiskCaching: null,
-        identity: null
-    }, $.parameters),
+
+    parameterMetadata:: import 'parameters.libsonnet',
+    local parameters = stdex.mergeParameters($.parameters, $.parameterMetadata),
 
     imageFromAlias(aliasOrImage)::
         //
@@ -60,17 +31,23 @@ local compute = import 'compute/module.libsonnet';
             assert std.type(aliasOrImage) == 'object' : "Unable to find image '%s'" % [ aliasOrImage ];
             aliasOrImage,
 
+    // Helper methods to conditionally build the resources that make up the
+    // VMSS and related pieces.
 
-
+    // Build a virtual network if one is not provided. 
     buildVirtualNetwork(parameters)::
         // Optionally build a virtual network. 
         local shouldCreateVnet = parameters.virtualNetwork == null;
         if shouldCreateVnet then 
-            network.VirtualNetwork.new('%sVNET' % [ parameters.name ])
+            network.VirtualNetwork.new(
+                    '%sVNET' % [ parameters.name ],
+                    addressPrefix='10.0.0.0/16')
                 .withSubnet('%sSubnet' % [ parameters.name ], addressPrefix='10.0.0.0/24')
         else
-            null,
+            parameters.virtualNetwork,
 
+    // Build a public IP Address unless on is provided, or the parameters
+    // indicate that one is not wanted...
     buildPublicIpAddress(parameters)::
         // Optionally build a public ip address
         local shouldCreatePublicIpAddress = parameters.publicIpAddress == null;
@@ -78,12 +55,14 @@ local compute = import 'compute/module.libsonnet';
             network.PublicIpAddress.new('%sLBPublicIP' % [ parameters.name ])
                 .withAllocationMethod(parameters.publicIpAllocationMethod)
         else 
-            null,
+            parameters.publicIpAddress,
 
+    // Build a front facing load balancer unless on is provided, or the 
+    // parameters indicate that one is not wanted...
     buildLoadBalancer(parameters, virtualNetwork, publicIpAddress)::
         local shouldCreateLoadBalancer = parameters.loadBalancer == null;
         if shouldCreateLoadBalancer then
-            network.LoadBalancer.new('%sLB' % [ parameters.name ])
+            network.LoadBalancer.new('%sLB' % [ parameters.name ], sku=parameters.loadBalancerSku)
                 .withIpConfiguration('loadBalancerFrontEnd')
                 .withPublicIpAddress(publicIpAddress)
                 .withBackendAddressPool(parameters.backendPoolName)
@@ -92,27 +71,29 @@ local compute = import 'compute/module.libsonnet';
             null,
 
     // Build all resources created by the module...   
-    local publicIpAddress = $.buildPublicIpAddress(parameters),
-    local virtualNetwork = $.buildVirtualNetwork(parameters),
-    local loadBalancer = $.buildLoadBalancer(parameters, virtualNetwork, publicIpAddress),
+    local publicIpAddress = self.buildPublicIpAddress(parameters),
+    local virtualNetwork = self.buildVirtualNetwork(parameters),
+    local loadBalancer = self.buildLoadBalancer(parameters, virtualNetwork, publicIpAddress),
     local vmss = compute.VirtualMachineScaleSet.new(
-                            name=parameters.name, 
-                            overProvision=!parameters.disableOverprovision,
-                            capacity=parameters.instanceCount,
-                            upgradePolicy=parameters.upgradePolicy,
-                            skuName=parameters.vmSku)
-        .fromImage($.imageFromAlias(parameters.imageReference))
+                            name=parameters.name,
+                            parameters={
+                                overProvision: !parameters.disableOverprovision,
+                                capacity: parameters.instanceCount,
+                                upgradePolicy: parameters.upgradePolicy,
+                                skuName: parameters.vmSku
+                            })
+        .fromImage(self.imageFromAlias(parameters.imageReference))
         .withAuth(parameters.adminUserName, parameters.adminPassword, parameters.sshPublicKeys)
         .withIdentity(parameters.identity)
-        .behindLoadBalancer(loadBalancer, virtualNetwork)
+        .behindLoadBalancer(loadBalancer, virtualNetwork, parameters.subnet)
         .withDataDisks(parameters.dataDiskSizes, parameters.dataDiskCaching),
 
-    resources: [
+    resources: [resource for resource in [
         virtualNetwork,
         publicIpAddress,
         loadBalancer,
         vmss,
-    ],
+    ] if core.isResource(resource)],
     outputs: {
         virtualMachineScaleSet: {
             type: 'string',
@@ -120,31 +101,7 @@ local compute = import 'compute/module.libsonnet';
         },
         [if virtualNetwork != null then 'virtualNetwork']: {
             type: 'string',
-            value: virtualNetwork.id
-        },
-    },
-
-// Boilerplate code - everything below this line is either for testing or should be 
-// part of the consumer of the module... 
-
-    asTemplate():: {
-        "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-        contentVersion: "1.0.0.0",
-        parameters: {},
-        resources: [
-            resource 
-            for resource in $.resources if resource != null
-        ],
-        outputs: $.outputs
-    },
- } {
-    parameters: {
-        name: 'simples_ubuntu',
-        adminUserName: 'johanste',
-        // adminPassword: '$ecreT$3612',
-        imageReference: 'UbuntuLTS',
-        sshPublicKeys: [ "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCXwbIlLS57sL6S7LKplMtT1UJLZXkKNaWmLum1r+MMqncIFVdWbqsjSB1hHYxjFP5VxR/cK5Kq1jmAq57S6JeOlC1JC86Ka+S5EHrboZo1t/zNbAFRcQXxdLgqSB3767Q24W48fhhKngCKuVJ8bvvwTC0WskgY2ePlwlG1Erfzc0twnVkHOYISM0zFGEdKcjqYR1PaYXmaPzaZsFMQAv3ymUd1hM4mj3ZfHm34M4rxjlUaTrhxVdN5z2TBHFjJa6YLulmex9g4MRaaHQU9xDL5BXpWHRmyepQ+P1KBjOd9VUam789+BCYaQ5ZC/9XaPDVvwOUkQaF7PinNgI98Nx+T JohanSte@Johans-MacBook-Pro.local\n" ],
-        dataDiskSizes: 1023,
-        identity: '[system]',
-    }, 
-}.asTemplate() 
+            value: core.resourceId(virtualNetwork)
+        }
+    }
+}

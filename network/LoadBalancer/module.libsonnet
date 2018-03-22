@@ -1,13 +1,16 @@
-local armmodule = import '../core/module.libsonnet';
+local armmodule = import 'core/module.libsonnet';
 
 armmodule.Resource {
 
     type: 'Microsoft.Network/loadBalancers',
     apiVersion: '2017-11-01',
 
-    new(name)::
+    new(name, sku=null)::
         self {
-            name: name
+            name: name,
+            [if sku != null then 'sku']: {
+                name: sku
+            },
         },
 
     withIpConfiguration(name)::
@@ -23,7 +26,7 @@ armmodule.Resource {
 
     withPublicIpAddress(publicIpAddress)::
         if publicIpAddress == null then self else
-        local name = armmodule.resourceName(publicIpAddress);
+        local publicIpAddressId = armmodule.resourceId(publicIpAddress);
         local existingIpConfigurations = self.properties.frontendIpConfigurations;
         self.withDependency(publicIpAddress) {
             properties +: {
@@ -34,7 +37,7 @@ armmodule.Resource {
                         existingIpConfigurations[std.length(existingIpConfigurations) - 1] {
                             properties +: {
                                 publicIpAddress +: {
-                                    id: "[resourceId('Microsoft.Network/publicIpAddresses', '%s')]" % [ name ],
+                                    id: publicIpAddressId,
                                 },
                             }
                         }
@@ -52,7 +55,7 @@ armmodule.Resource {
                     ipconf 
                     for ipconf in existingIpConfigurations[0:std.length(existingIpConfigurations) - 1]]
                     + [
-                        existingIpConfigurations[0:std.length(existingIpConfigurations) - 1] {
+                        existingIpConfigurations[std.length(existingIpConfigurations) - 1] {
                             properties +: {
                                 subnet: {
                                     id: "[concat(resourceId('Microsoft.Network/virtualNetworks', '%s'), '/subnets/%s')]" % [ vnetName, subnetName ],

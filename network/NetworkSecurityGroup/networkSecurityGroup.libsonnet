@@ -1,4 +1,4 @@
-local armmodule = import '../core/module.libsonnet';
+local armmodule = import 'core/module.libsonnet';
 
 armmodule.Resource {
  
@@ -22,9 +22,9 @@ armmodule.Resource {
         }
     },
 
-    new(name)::
+    new(parameters)::
         self {
-            name: name,
+            name: parameters.name,
             properties: {
                 securityRules: [],
             },

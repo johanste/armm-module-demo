@@ -1,0 +1,60 @@
+{
+    "$schema":"http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+    "contentVersion":"1.0.0.0",
+    "parameters":{},
+    "variables":{},
+    "resources":[
+        {
+            "name": "TheVnet",
+            "type": "Microsoft.JohanSte/modules",
+            "apiVersion": "1971-11--01",
+            "properties": {
+                "module": "network/VirtualNetwork/module.libsonnet",
+                "name": "vnet"
+            }
+        },
+        {
+            "name": "PublicIpAddress",
+            "type": "Microsoft.JohanSte/modules",
+            "apiVersion": "1971-11-01",
+            "properties": {
+                "name": "pip",
+                "module": "network/PublicIpAddress/module.libsonnet"
+            }            
+        },
+        {
+            "name": "FirstVmssModule",
+            "type": "Microsoft.JohanSte/modules",
+            "apiVersion": "1971-11-01",
+            "properties": {
+                "module": "cli/vmss/module.libsonnet",
+                "name": "thisIsSoMuchSimpler",
+                "adminUserName": "johanste",
+                "imageReference": "UbuntuLTS",
+                "sshPublicKeys": [ "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCXwbIlLS57sL6S7LKplMtT1UJLZXkKNaWmLum1r+MMqncIFVdWbqsjSB1hHYxjFP5VxR/cK5Kq1jmAq57S6JeOlC1JC86Ka+S5EHrboZo1t/zNbAFRcQXxdLgqSB3767Q24W48fhhKngCKuVJ8bvvwTC0WskgY2ePlwlG1Erfzc0twnVkHOYISM0zFGEdKcjqYR1PaYXmaPzaZsFMQAv3ymUd1hM4mj3ZfHm34M4rxjlUaTrhxVdN5z2TBHFjJa6YLulmex9g4MRaaHQU9xDL5BXpWHRmyepQ+P1KBjOd9VUam789+BCYaQ5ZC/9XaPDVvwOUkQaF7PinNgI98Nx+T JohanSte@Johans-MacBook-Pro.local\n" ],
+                "dataDiskSizes": 1023,
+                "identity": "[system]",
+                "publicIpAddress": "[reference('PublicIpAddress').outputs.id.value]"
+            }
+        },
+        {
+            "name": "SecondVmssModule",
+            "type": "Microsoft.JohanSte/modules",
+            "apiVersion": "1971-11-01",
+            "dependsOn": ["TheVnet"],
+            "properties": {
+                "module": "cli/vmss/module.libsonnet",
+                "name": "othevmms",
+                "adminUserName": "johanste",
+                "imageReference": "UbuntuLTS",
+                "sshPublicKeys": [ "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCXwbIlLS57sL6S7LKplMtT1UJLZXkKNaWmLum1r+MMqncIFVdWbqsjSB1hHYxjFP5VxR/cK5Kq1jmAq57S6JeOlC1JC86Ka+S5EHrboZo1t/zNbAFRcQXxdLgqSB3767Q24W48fhhKngCKuVJ8bvvwTC0WskgY2ePlwlG1Erfzc0twnVkHOYISM0zFGEdKcjqYR1PaYXmaPzaZsFMQAv3ymUd1hM4mj3ZfHm34M4rxjlUaTrhxVdN5z2TBHFjJa6YLulmex9g4MRaaHQU9xDL5BXpWHRmyepQ+P1KBjOd9VUam789+BCYaQ5ZC/9XaPDVvwOUkQaF7PinNgI98Nx+T JohanSte@Johans-MacBook-Pro.local\n" ],
+                "dataDiskSizes": 1023,
+                "identity": "[system]",
+                "virtualNetwork": "vnet",
+                "subnet": "default"
+            }
+        }
+    ],
+  
+    "outputs":{}
+}
