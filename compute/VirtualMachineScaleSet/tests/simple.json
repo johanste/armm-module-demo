@@ -1,0 +1,25 @@
+{
+    "$schema":"http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+    "contentVersion":"1.0.0.0",
+    "parameters":{},
+    "variables":{},
+    "resources":[
+        {
+            "name": "TestVirtualMachineScaleSet",
+            "type": "Microsoft.JohanSte/modules",
+            "apiVersion": "1971-11-01",
+            "properties": {
+                "module": "compute/VirtualMachineScaleSet/module.libsonnet",
+                "name": "vmss"
+            }
+        }
+    ],
+  
+    "outputs": {
+        "virtualMachineScaleSet": {
+            "type": "string",
+            "value": "[reference('TestVirtualMachineScaleSet').outputs.id.value]"
+        }
+
+    }
+}
