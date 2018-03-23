@@ -1,9 +1,21 @@
 local LoadBalancer = import '../module.libsonnet';
 local PublicIp = import 'network/PublicIpAddress/module.libsonnet';
+local Vnet = import 'network/VirtualNetwork/module.libsonnet';
 
-LoadBalancer.new(
-    name='testlb'
-).withIpConfiguration('default')
-.onSubnet((import 'network/VirtualNetwork/module.libsonnet').new('VNET', addressPrefix='10.0.0.0/16').withSubnet('SUBNET', addressPrefix='10.0.0.0/24'))
-.withPublicIpAddress(PublicIp.new(name='pip'))
-.withIpConfiguration('backend')
+local vnet = Vnet {
+    parameters: {
+        name: 'thevnet',
+        subnet: 'subnet'
+    },
+};
+
+LoadBalancer {
+    parameters:: {
+        name: 'lb',
+        sku: 'basic',
+        ipConfiguration: 'first',
+        publicIpAddress: false,
+        virtualNetwork: vnet.resource,
+        subnet: vnet.outputs.subnet.value[0],
+    },
+}

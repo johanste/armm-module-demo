@@ -40,13 +40,13 @@
                 for parameterName in std.objectFieldsAll(parameters) 
                 if !(parameterName in metadata)
             ];
-            assert acceptUnknownParameters || std.length(unknownParameters) == 0 : "Unexpected parameters '%s' received" % [ unknownParameters ];
+            assert acceptUnknownParameters || std.length(unknownParameters) == 0 : "Unexpected parameters '%s' received. Expected one of '%s'" % [ unknownParameters, std.objectFieldsAll(metadata) ];
 
             parameters {
                 [k] : if k in super then super[k] else if 'defaultValue' in metadata[k] then metadata[k].defaultValue else error "Missing parameter '%s'" % [ k ]
                 for k in std.set(std.objectFieldsAll(parameters) + std.objectFieldsAll(metadata))
             },
-            
+
         get(instance, member, default)::
             assert self.isObject(instance) : "Incorrect type for parameter 'instance' - expected 'object', got '%s'" % [ std.type(instance) ];
             assert self.isString(member) : "Incorrect type parameter 'member' - expected 'string', got '%s'" % [ std.type(member) ];

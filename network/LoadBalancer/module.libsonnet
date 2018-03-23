@@ -1,115 +1,46 @@
-local armmodule = import 'core/module.libsonnet';
+local Module = import 'core/moduledef.libsonnet';
+local LoadBalancer = import 'loadBalancer.libsonnet';
 
-armmodule.Resource {
+Module {
 
-    type: 'Microsoft.Network/loadBalancers',
-    apiVersion: '2017-11-01',
-
-    new(name, sku=null)::
-        self {
-            name: name,
-            [if sku != null then 'sku']: {
-                name: sku
-            },
+    parameterMetadata:: {
+        name: {
+            type: 'string'
         },
-
-    withIpConfiguration(name)::
-        self {
-            properties +: {
-                frontendIpConfigurations +: [
-                    {
-                        name: name
-                    }
-                ],
-            },
+        sku: {
+            type: 'string',
+            defaultValue: null
         },
-
-    withPublicIpAddress(publicIpAddress)::
-        if publicIpAddress == null then self else
-        local publicIpAddressId = armmodule.resourceId(publicIpAddress);
-        local existingIpConfigurations = self.properties.frontendIpConfigurations;
-        self.withDependency(publicIpAddress) {
-            properties +: {
-                frontendIpConfigurations: [
-                    ipconf 
-                    for ipconf in existingIpConfigurations[0:std.length(existingIpConfigurations) - 1]]
-                    + [
-                        existingIpConfigurations[std.length(existingIpConfigurations) - 1] {
-                            properties +: {
-                                publicIpAddress +: {
-                                    id: publicIpAddressId,
-                                },
-                            }
-                        }
-                    ]
-                },
-            },
-
-    onSubnet(vnet, subnet=null, ipConfigurationName=null)::
-        local vnetName = armmodule.resourceName(vnet);
-        local subnetName = if subnet != null then subnet else vnet.properties.subnets[0].name;
-        local existingIpConfigurations = self.properties.frontendIpConfigurations;
-        self.withDependency(vnet) {
-            properties +: {
-                frontendIpConfigurations: [
-                    ipconf 
-                    for ipconf in existingIpConfigurations[0:std.length(existingIpConfigurations) - 1]]
-                    + [
-                        existingIpConfigurations[std.length(existingIpConfigurations) - 1] {
-                            properties +: {
-                                subnet: {
-                                    id: "[concat(resourceId('Microsoft.Network/virtualNetworks', '%s'), '/subnets/%s')]" % [ vnetName, subnetName ],
-                                },                                
-                            }
-                        },
-                    ],
-                },
-            },
-
-
-    withBackendAddressPool(name)::
-        self {
-            properties +: {
-                backendAddressPools +: [
-                    {
-                        name: if name != null then name else '%sBEPool' % [ $.name ],
-                    }
-                ],
-            },
+        publicIpAddress: {
+            type: [ 'string', 'boolean', 'object' ],
+            defaultValue: null,
         },
-    
-    withNatRule(ruleOrName)::
-        local name = "%sNatPool" % [ $.name ];
-        local lastFrontendIpConfiguration = armmodule.stdex.last($.properties.frontendIpConfigurations);
-        local frontendIpConfigurationId = "[concat(resourceId('Microsoft.Network/loadBalancers', '%s'), '/frontendIPConfigurations/', '%s')]" % [ $.name, lastFrontendIpConfiguration.name ];
+        ipConfiguration: {
+            type: 'string',
+            defaultValue: 'ipconfig'
+        },
+        virtualNetwork: {
+            type: 'object',
+            defaultValue: null,
+        },
+        subnet: {
+            type: 'string',
+            defaultValue: null,
+        },
+    },
+    resource:: 
+        local raw = LoadBalancer.new(
+            name = $.arguments.name,
+            sku = $.arguments.sku
+        ).withIpConfiguration($.arguments.ipConfiguration);
+        local addIp = if $.arguments.publicIpAddress != false then raw.withPublicIpAddress($.arguments.publicIpAddress) else raw;
+        addIp.onSubnet($.arguments.virtualNetwork, $.arguments.subnet),
 
-        local builtInRules = {
-            ssh: {
-                backendPort: 22,
-                frontendPortRangeEnd: "50119",
-                frontendPortRangeStart: "50000",
-                protocol: "tcp"
-            }     
-        };
 
-        local settings = {
-            frontendIPConfiguration: {
-                id: frontendIpConfigurationId,
-            }
-        } + if std.type(ruleOrName) == 'string' then
-            builtInRules[ruleOrName]
-        else
-            ruleOrName;
-        
-        self + {
-            properties +: {
-                inboundNatPools +: 
-                    [
-                        {
-                            name: name,
-                            properties: settings
-                        }
-                    ]
-                }
-            },
+    resources: [
+        $.resource
+    ],
+    outputs: {
+        id: $.resource.id
+    },
 }
