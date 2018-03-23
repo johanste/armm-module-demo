@@ -39,6 +39,7 @@ A caller can inspect what arguments a module provides by examining the parameter
         }
     }
 }
-The `parameterMetadata` will also be used by the module to validate the provided parameters.
 ```
+The `parameterMetadata` will also be used by the module to validate the provided parameters.
+
 ## Resource
