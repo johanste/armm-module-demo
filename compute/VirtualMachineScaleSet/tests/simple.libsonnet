@@ -1,5 +1,6 @@
 (import '../module.libsonnet') {
-    parameters: {
+    parameters:: {
         name: 'doesitwork',
+        imageReference: 'UbuntuLTS',
     }
-}
+} 

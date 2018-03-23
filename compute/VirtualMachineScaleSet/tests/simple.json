@@ -14,7 +14,7 @@
             }
         }
     ],
-  
+
     "outputs": {
         "virtualMachineScaleSet": {
             "type": "string",

@@ -95,7 +95,8 @@ armmodule.Resource {
     type: 'Microsoft.Compute/virtualMachineScaleSets',
 
     new(name,
-        osType='linux',
+        osType,
+        imageReference,
         skuName='standard_d1_v2',
         capacity=3,
         overProvision=null, 
@@ -132,7 +133,7 @@ armmodule.Resource {
                     },
                 },
             },
-        },
+        }.fromImage(imageReference),
 
     makeComputerNamePrefix(name)::
         local computerNamePrefix = armmodule.stdex.strReplace(name, '_', '');

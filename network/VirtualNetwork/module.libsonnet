@@ -1,5 +1,6 @@
-local stdex = (import 'core/module.libsonnet').stdex;
-{
+local Module = import 'core/moduledef.libsonnet';
+
+Module {
     parameterMetadata:: {
         name: {
             type: 'string'
@@ -22,19 +23,17 @@ local stdex = (import 'core/module.libsonnet').stdex;
         },
     },
 
-    local parameters = stdex.mergeParameters($.parameters, $.parameterMetadata),
-
     //
     // The instance member contains the resource as created "by default" from the 
     // given set of parameters.
     // 
     resource:: $.new(
-                    name = parameters.name,
-                    addressPrefix = parameters.addressPrefix
+                    name = $.arguments.name,
+                    addressPrefix = $.arguments.addressPrefix
                 ).withSubnet(
-                    name = parameters.subnet,
-                    addressPrefix = parameters.subnetAddressPrefix
-                ).withNetworkSecurityGroup(parameters.networkSecurityGroup),
+                    name = $.arguments.subnet,
+                    addressPrefix = $.arguments.subnetAddressPrefix
+                ).withNetworkSecurityGroup($.arguments.networkSecurityGroup),
 
     new(name, addressPrefix)::
         (import 'virtualNetwork.libsonnet').new(
@@ -49,6 +48,10 @@ local stdex = (import 'core/module.libsonnet').stdex;
         id: {
             type: 'string',
             value: $.resource.id
-        }
+        },
+        subnet: {
+            type: 'array',
+            value: [subnet.name for subnet in $.resource.properties.subnets],
+        },
     }
 }

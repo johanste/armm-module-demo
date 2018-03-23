@@ -1,19 +1,19 @@
 local network = {
-    LoadBalancer: import 'network/LoadBalancer/module.libsonnet',
+    LoadBalancer: import 'network/LoadBalancer/loadBalancer.libsonnet',
     PublicIpAddress: import 'network/PublicIpAddress/module.libsonnet',
     VirtualNetwork: import 'network/VirtualNetwork/module.libsonnet',
 };
 local compute = {
-    VirtualMachineScaleSet: import 'compute/VirtualMachineScaleSet/module.libsonnet'
+    VirtualMachineScaleSet: import 'compute/VirtualMachineScaleSet/virtualMachineScaleSet.libsonnet'
 };
 
 local core = import 'core/module.libsonnet';
 local stdex = core.stdex;
+local Module = import 'core/moduledef.libsonnet';
 
-{
+Module {
 
     parameterMetadata:: import 'parameters.libsonnet',
-    local parameters = stdex.mergeParameters($.parameters, $.parameterMetadata),
 
     imageFromAlias(aliasOrImage)::
         //
@@ -23,9 +23,9 @@ local stdex = core.stdex;
         // 
         assert std.type(aliasOrImage) == 'object' || std.type(aliasOrImage) == 'string' : "imageFromAlias parameter expected 'object' or 'string' type parameter - got %s" % [ std.type(aliasOrImage) ];
         local vmImages = (import 'cli/content/vm_alisases.json').outputs.aliases.value;
-        if std.type(parameters.imageReference) == 'string' && std.objectHas(vmImages.Linux, aliasOrImage) then
+        if std.type(aliasOrImage) == 'string' && std.objectHas(vmImages.Linux, aliasOrImage) then
             vmImages.Linux[aliasOrImage]
-        else if std.type(parameters.imageReference) == 'string' && std.objectHas(vmImages.Windows, aliasOrImage) then
+        else if std.type(aliasOrImage) == 'string' && std.objectHas(vmImages.Windows, aliasOrImage) then
             vmImages.Windows[aliasOrImage]
         else
             assert std.type(aliasOrImage) == 'object' : "Unable to find image '%s'" % [ aliasOrImage ];
@@ -71,22 +71,22 @@ local stdex = core.stdex;
             null,
 
     // Build all resources created by the module...   
-    local publicIpAddress = self.buildPublicIpAddress(parameters),
-    local virtualNetwork = self.buildVirtualNetwork(parameters),
-    local loadBalancer = self.buildLoadBalancer(parameters, virtualNetwork, publicIpAddress),
+    local publicIpAddress = self.buildPublicIpAddress($.arguments),
+    local virtualNetwork = self.buildVirtualNetwork($.arguments),
+    local loadBalancer = self.buildLoadBalancer($.arguments, virtualNetwork, publicIpAddress),
     local vmss = compute.VirtualMachineScaleSet.new(
-                            name=parameters.name,
-                            parameters={
-                                overProvision: !parameters.disableOverprovision,
-                                capacity: parameters.instanceCount,
-                                upgradePolicy: parameters.upgradePolicy,
-                                skuName: parameters.vmSku
-                            })
-        .fromImage(self.imageFromAlias(parameters.imageReference))
-        .withAuth(parameters.adminUserName, parameters.adminPassword, parameters.sshPublicKeys)
-        .withIdentity(parameters.identity)
-        .behindLoadBalancer(loadBalancer, virtualNetwork, parameters.subnet)
-        .withDataDisks(parameters.dataDiskSizes, parameters.dataDiskCaching),
+                            name= $.arguments.name,
+                            osType = 'linux', // UNDONE - support windows agains
+                            imageReference = self.imageFromAlias($.arguments.imageReference),
+                            overProvision = ! $.arguments.disableOverprovision,
+                            capacity = $.arguments.instanceCount,
+                            upgradePolicy = $.arguments.upgradePolicy,
+                            skuName = $.arguments.vmSku
+                            )
+        .withAuth($.arguments.adminUserName, $.arguments.adminPassword, $.arguments.sshPublicKeys)
+        .withIdentity($.arguments.identity)
+        .behindLoadBalancer(loadBalancer, virtualNetwork, $.arguments.subnet)
+        .withDataDisks($.arguments.dataDiskSizes, $.arguments.dataDiskCaching),
 
     resources: [resource for resource in [
         virtualNetwork,

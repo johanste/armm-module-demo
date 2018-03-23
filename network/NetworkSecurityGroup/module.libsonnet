@@ -1,26 +1,26 @@
-local core = import 'core/module.libsonnet';
-local stdex = core.stdex;
+local Module = import 'core/moduledef.libsonnet';
 
-{
+Module {
     parameterMetadata:: {
         name: {
             type: 'string'
-        }
+        },
+        rule: {
+            type: 'string',
+            defaultValue: null,
+        },
     },
 
-    local parameters = stdex.mergeParameters($.parameters, $.parameterMetadata),
-    instance:: $.new(parameters),
-
-    new(parameters)::
-        (import 'networkSecurityGroup.libsonnet').new(parameters),
+    resource::
+        (import 'networkSecurityGroup.libsonnet').new($.arguments.name).withRule($.arguments.rule),
 
     resources: [
-        $.instance
+        $.resource
     ],
     outputs: {
         id: {
             type: 'string',
-            value: $.instance.id
+            value: $.resource.id
         }
     }
 }

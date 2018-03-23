@@ -10,5 +10,5 @@ local module = PublicIpAddress {
 
 {
     r: publicIp,
-    m: module.instance,
+    m: module.resource,
 }

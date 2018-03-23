@@ -22,9 +22,11 @@ armmodule.Resource {
         }
     },
 
-    new(parameters)::
+    new(
+        name
+    )::
         self {
-            name: parameters.name,
+            name: name,
             properties: {
                 securityRules: [],
             },
@@ -37,24 +39,27 @@ armmodule.Resource {
             protocol=null, 
             sourcePortRange=null,
             destinationPortRange=null)::
-        local ruleDefinition = if std.type(rule) == 'string' && std.objectHas($.wellKnownRules, rule) then $.wellKnownRules[rule] else rule;
-        local overrides = std.prune({
-            [if std.type(ruleDefinition) == 'string' then 'name']: ruleDefinition,
-            properties: {
-                access: access,
-                direction: direction,
-                priority: priority,
-                protocol: protocol,
-                sourcePortRange: sourcePortRange,
-                destinationPortRange: destinationPortRange,
-            },
-        });
+        if rule == null then
+            self
+        else
+            local ruleDefinition = if std.type(rule) == 'string' && std.objectHas($.wellKnownRules, rule) then $.wellKnownRules[rule] else rule;
+            local overrides = std.prune({
+                [if std.type(ruleDefinition) == 'string' then 'name']: ruleDefinition,
+                properties: {
+                    access: access,
+                    direction: direction,
+                    priority: priority,
+                    protocol: protocol,
+                    sourcePortRange: sourcePortRange,
+                    destinationPortRange: destinationPortRange,
+                },
+            });
 
-        self {
-            properties +: {
-                securityRules +: [
-                    std.mergePatch(ruleDefinition,overrides)
-                ]
+            self {
+                properties +: {
+                    securityRules +: [
+                        std.mergePatch(ruleDefinition,overrides)
+                    ]
+                },
             },
-        },
 }
