@@ -28,6 +28,7 @@ Module {
             defaultValue: null,
         },
     },
+    
     resource:: 
         local raw = LoadBalancer.new(
             name = $.arguments.name,
@@ -37,9 +38,6 @@ Module {
         addIp.onSubnet($.arguments.virtualNetwork, $.arguments.subnet),
 
 
-    resources: [
-        $.resource
-    ],
     outputs: {
         id: $.resource.id
     },

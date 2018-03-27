@@ -10,7 +10,7 @@ local core = import 'module.libsonnet';
     dependsOn:[],
     tags: {},
     withDependency(resourceOrId)::
-        if core.isResource(resourceOrId) then 
+        if core.isResource(resourceOrId) || core.isModule(resourceOrId) then 
             self {
                 dependsOn +: [ resourceOrId.id ]
             }

@@ -8,6 +8,9 @@
     isResource(resource)::
         $.stdex.isObject(resource) && $.stdex.get(resource, 'type', null) != null,
 
+    isModule(object)::
+        $.stdex.isObject(object) && $.stdex.get(object, 'resources', null) != null,
+        
     resourceId(instanceOrString)::
         if $.stdex.isString(instanceOrString) then instanceOrString
         else instanceOrString.id,
