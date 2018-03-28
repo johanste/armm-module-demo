@@ -3,6 +3,8 @@ local VirtualMachineScaleSet = import 'virtualMachineScaleSet.libsonnet';
 
 Module {
 
+    id:: $.resource.id,
+
     parameterMetadata:: {
         name: {
             type: 'string',
@@ -17,6 +19,14 @@ Module {
         },
         imageReference: {
             type: 'object',
+        },
+        virtualNetwork: {
+            type: 'object',
+            defaultValue: null
+        },
+        subnet: {
+            type: 'string',
+            defaultValue: null,
         },
         capacity: {
             type: 'number',
@@ -47,6 +57,8 @@ Module {
     resource:: VirtualMachineScaleSet.new (
         name = $.arguments.name,
         imageReference = $.arguments.imageReference,
+        virtualNetwork = $.arguments.virtualNetwork,
+        subnet = $.arguments.subnet,
         osType = $.arguments.osType,
         skuName = $.arguments.skuName,
         capacity = $.arguments.capacity,
@@ -57,9 +69,6 @@ Module {
         zoneBalance = $.arguments.zoneBalance
     ),
 
-    resources: [
-        $.resource
-    ],
     outputs: {
         id: {
             type: 'string',

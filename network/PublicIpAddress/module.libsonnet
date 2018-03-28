@@ -24,9 +24,6 @@ Module {
 
         resource.withAllocationMethod(allocationMethod),
 
-    resources: [
-        $.resource
-    ],
     outputs: {
         id: {
             type: 'string',

@@ -1,4 +1,5 @@
 local Module = import 'core/moduledef.libsonnet';
+local NetworkSecurityGroup = import 'network/NetworkSecurityGroup/module.libsonnet';
 
 Module {
     parameterMetadata:: {
@@ -27,7 +28,7 @@ Module {
     // The instance member contains the resource as created "by default" from the 
     // given set of parameters.
     // 
-    resource:: $.new(
+    virtualNetwork:: $.new(
                     name = $.arguments.name,
                     addressPrefix = $.arguments.addressPrefix
                 ).withSubnet(
@@ -41,17 +42,31 @@ Module {
             addressPrefix=addressPrefix
         ),
 
-    resources: [
-        $.resource
-    ],
+    withAccess(accessType)::
+        self {
+            networkSecurityGroup:: NetworkSecurityGroup {
+                parameters: {
+                    name: $.arguments.name + 'NSG',
+                    rule: accessType
+                },
+            },
+        },
+
     outputs: {
+        
         id: {
             type: 'string',
-            value: $.resource.id
+            value: $.virtualNetwork.id
         },
         subnet: {
             type: 'array',
-            value: [subnet.name for subnet in $.resource.properties.subnets],
+            value: [subnet.name for subnet in $.virtualNetwork.properties.subnets],
         },
     }
+} 
+
+{
+    parameters:: {
+        name: 'thevnet'
+    },
 }

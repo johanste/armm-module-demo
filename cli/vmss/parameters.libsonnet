@@ -49,7 +49,7 @@
     },
     virtualNetwork: {
         type: [ 'object', 'string' ],
-        defaultValue: null,
+        defaultValue: '[new]',
     },
     backendPoolName: {
         type: 'string', 

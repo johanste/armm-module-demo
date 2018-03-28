@@ -14,8 +14,8 @@ LoadBalancer {
         name: 'lb',
         sku: 'basic',
         ipConfiguration: 'first',
-        publicIpAddress: false,
-        virtualNetwork: vnet.resource,
+        publicIpAddress: false, 
+        virtualNetwork: vnet.virtualNetwork,
         subnet: vnet.outputs.subnet.value[0],
     },
 }

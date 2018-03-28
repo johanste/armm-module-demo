@@ -103,14 +103,16 @@ armmodule.Resource {
         platformFaultDomainCount=null,
         singlePlacementGroup=null,
         upgradePolicy='manual',
-        zoneBalance=null)::
+        zoneBalance=null,
+        virtualNetwork=null,
+        subnet=null)::
         
         local osMixin = if osType == 'windows' then 
                             WindowsOsMixin 
                         else 
                             LinuxOsMixin;
 
-        self + osMixin + ManagedPlatformImageOsDiskMixin {
+        (self + osMixin + ManagedPlatformImageOsDiskMixin {
             name: name,
             sku: {
                 capacity: capacity,
@@ -133,7 +135,7 @@ armmodule.Resource {
                     },
                 },
             },
-        }.fromImage(imageReference),
+        }).onSubnet(virtualNetwork, subnet).fromImage(imageReference),
 
     makeComputerNamePrefix(name)::
         local computerNamePrefix = armmodule.stdex.strReplace(name, '_', '');
@@ -266,35 +268,38 @@ armmodule.Resource {
             },
 
     onSubnet(vnet, subnet=null)::
-        local vnetName = if std.type(vnet) == 'object' && std.objectHas(vnet, 'name') then vnet.name else vnet;
-        local subnetName = if subnet != null then subnet else vnet.properties.subnets[0].name;
+        if vnet == null then
+            self
+        else
+            local vnetName = if std.type(vnet) == 'object' && std.objectHas(vnet, 'name') then vnet.name else vnet;
+            local subnetName = if subnet != null then subnet else vnet.properties.subnets[0].name;
 
-        self.withDependency(vnet) {
-            properties +: {
-                virtualMachineProfile +: {
-                    networkProfile +: {
-                        local isPrimary = std.length(self.networkInterfaceConfigurations) == 1,
+            self.withDependency(vnet) {
+                properties +: {
+                    virtualMachineProfile +: {
+                        networkProfile +: {
+                            local isPrimary = std.length(self.networkInterfaceConfigurations) == 1,
 
-                        networkInterfaceConfigurations +: [
-                            {
-                                name: '%s' % [vnetName], 
-                                properties: {
-                                    primary: isPrimary,
-                                    ipConfigurations: [
-                                        { 
-                                            name: '%s-%s' % [vnetName, subnetName], 
-                                            properties: {
-                                                subnet: {
-                                                    id: "[concat(resourceId('Microsoft.Network/virtualNetworks', '%s'), '/subnets/%s')]" % [ vnetName, subnetName ],
+                            networkInterfaceConfigurations +: [
+                                {
+                                    name: '%s' % [vnetName], 
+                                    properties: {
+                                        primary: isPrimary,
+                                        ipConfigurations: [
+                                            { 
+                                                name: '%s-%s' % [vnetName, subnetName], 
+                                                properties: {
+                                                    subnet: {
+                                                        id: "[concat(resourceId('Microsoft.Network/virtualNetworks', '%s'), '/subnets/%s')]" % [ vnetName, subnetName ],
+                                                    },
                                                 },
-                                            },
-                                        }
-                                    ]
+                                            }
+                                        ]
+                                    }
                                 }
-                            }
-                        ]
+                            ]
+                        },
                     },
                 },
             },
-        },
-}
+    }
