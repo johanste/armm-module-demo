@@ -194,7 +194,7 @@ armmodule.Resource {
         else 
             local lbName = armmodule.resourceName(loadBalancer);
             local vnetName = armmodule.resourceName(vnet);
-            local backendAddressPoolName = armmodule.stdex.coalesce([backendAddressPool, loadBalancer.properties.backendAddressPools[0].name]);
+            local backendAddressPoolName = if backendAddressPool != null then backendAddressPool else loadBalancer.properties.backendAddressPools[0].name;
             local natPoolName = if natPool != null then natPool else if std.length(loadBalancer.properties.inboundNatPools) > 0 then loadBalancer.properties.inboundNatPools[0].name else null;
             local subnetName = if subnet != null then subnet else vnet.properties.subnets[0].name;
             local ipConfigurationName = '%sIPConfig' % [ lbName ];

@@ -13,7 +13,8 @@
         
     resourceId(instanceOrString)::
         if $.stdex.isString(instanceOrString) then instanceOrString
-        else instanceOrString.id,
+        else if 'id' in instanceOrString then instanceOrString.id
+        else error "'Tried to get id from object that didn't have an id - '%s'" % [ instanceOrString ],
 
     resourceName(instanceOrName)::
         if std.type(instanceOrName) == 'string' then
@@ -38,6 +39,7 @@
             std.type(val) == 'array',
 
         mergeParameters(parameters, metadata, acceptUnknownParameters = false)::
+            // UNDONE: Check type + validate value
             local unknownParameters = [
                 parameterName
                 for parameterName in std.objectFieldsAll(parameters) 
@@ -45,11 +47,13 @@
             ];
             assert acceptUnknownParameters || std.length(unknownParameters) == 0 : "Unexpected parameters '%s' received. Expected one of '%s'" % [ unknownParameters, std.objectFieldsAll(metadata) ];
 
-            parameters {
+            local mergedParameters = parameters {
                 [k] : if k in super then super[k] else if 'defaultValue' in metadata[k] then metadata[k].defaultValue else error "Missing parameter '%s'" % [ k ]
                 for k in std.set(std.objectFieldsAll(parameters) + std.objectFieldsAll(metadata))
-            },
+            };
+            mergedParameters,
 
+ 
         get(instance, member, default)::
             assert self.isObject(instance) : "Incorrect type for parameter 'instance' - expected 'object', got '%s'" % [ std.type(instance) ];
             assert self.isString(member) : "Incorrect type parameter 'member' - expected 'string', got '%s'" % [ std.type(member) ];
@@ -58,27 +62,7 @@
                 instance[member]
             else
                 default,
-
-        verifyRequred(requiredArr, parameters)::
-            local requiredSet = std.set(requiredArr);
-            local providedSet = std.set(std.objectFieldsAll(parameters));
-            local foundSet = std.setInter(requiredSet, providedSet);
-
-            assert std.length(requiredSet) == std.length(foundSet) : "Missing required parameters - expected %s, didn't find %s" %
-                [ requiredSet, providedSet ];
-
-            true,
                 
-        coalesce(arr)::
-            local isNonNull = function(item)
-                item != null;
-
-            local nonNullItems = std.filter(isNonNull, arr) ;
-            if nonNullItems == [] then
-                null
-            else 
-                nonNullItems[0],
-
         last(arr)::
             assert std.type(arr) == 'array' : "parameter 'arr' must be of type 'array' - got " % [ std.type(arr) ];
             local len = std.length(arr);
