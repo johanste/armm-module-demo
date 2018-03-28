@@ -19,8 +19,8 @@ local VirtualMachineScaleSet = import 'compute/VirtualMachineScaleSet/module.lib
 Module {
 
     // Parameter metadata allows for introspection of the module to understand what
-    // parameters can be passed to the module as well as other metadat such as 
-    // default values. 
+    // parameters can be passed to the module as well as other metadata such as 
+    // default values and parameter types. 
     parameterMetadata: {
         name: {
             type: 'string',
@@ -67,7 +67,8 @@ Module {
             imageReference: 'ubuntuLTS', // TODO: Move the simple/commonly used image names from the CLI VMSS module to the platform VMSS module
             skuName: $.arguments.size,
             // Passing a resource as an argument to another module sets up a dependency automagically
-            virtualNetwork: $.virtualNetwork.virtualNetwork, // ISSUE - getting 'root' instance from a module is ugly here
+            [if $.arguments.subnet == null then 'virtualNetwork']: $.virtualNetwork.virtualNetwork, // ISSUE - getting 'root' instance from a module is ugly here
+            [if $.arguments.subnet != null then 'subnet']: $.arguments.subnet
         },
     },
 
@@ -78,5 +79,6 @@ Module {
     parameters:: {
         size: 'Standard_A0',
         allowPublicAccess: true,
+        subnet: '/subscriptions/43fb366f-2061-4600-9d5d-795a6a0bba4c/resourceGroups/cli/providers/Microsoft.Network/virtualNetworks/vnet/subnets/default'
     }
 }

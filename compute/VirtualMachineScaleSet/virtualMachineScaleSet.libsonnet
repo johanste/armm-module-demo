@@ -267,14 +267,16 @@ armmodule.Resource {
                 },
             },
 
-    onSubnet(vnet, subnet=null)::
-        if vnet == null then
-            self
-        else
-            local vnetName = if std.type(vnet) == 'object' && std.objectHas(vnet, 'name') then vnet.name else vnet;
-            local subnetName = if subnet != null then subnet else vnet.properties.subnets[0].name;
+    
+    _onSubnetById(subnet)::
+        local parts = std.split(subnet, '/');
+        local vnetName = parts[8];
+        local subnetName = parts[10];
 
-            self.withDependency(vnet) {
+        self._onSubnetCore(vnetName, subnetName),
+
+    _onSubnetCore(vnetName, subnetName)::
+        self  {
                 properties +: {
                     virtualMachineProfile +: {
                         networkProfile +: {
@@ -302,4 +304,14 @@ armmodule.Resource {
                     },
                 },
             },
-    }
+
+    onSubnet(vnet, subnet=null)::
+        if vnet == null && subnet == null then
+            self
+        else if vnet == null && armmodule.isValidResourceId(subnet) then
+            self._onSubnetById(subnet)
+        else if armmodule.isResource(vnet) then
+            self.withDependency(vnet)._onSubnetCore(vnet.name, subnet)
+        else 
+            self,
+}
