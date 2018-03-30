@@ -52,14 +52,15 @@ Module {
                             },
 
 
-    virtualNetwork:: if $.arguments.subnet == null then VirtualNetwork {
-        parameters: {
-            name: $.arguments.name + 'vnet',
-            addressPrefix: if $.arguments.size == 'small' then '10.0.0.0/24' else '10.0.0.0/16',
-            subnet: 'frontend',
-            networkSecurityGroup: $.networkSecurityGroup
-        }
-    },
+    virtualNetwork:: if $.arguments.subnet == null then
+                        VirtualNetwork {
+                            parameters: {
+                                name: $.arguments.name + 'vnet',
+                                addressPrefix: if $.arguments.size == 'small' then '10.0.0.0/24' else '10.0.0.0/16',
+                                subnet: 'frontend',
+                                networkSecurityGroup: $.networkSecurityGroup
+                            }
+                        },
 
     virtualMachineScaleSet:: VirtualMachineScaleSet {
         parameters: {

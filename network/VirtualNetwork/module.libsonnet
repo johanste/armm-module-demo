@@ -50,6 +50,9 @@ Module {
                     rule: accessType
                 },
             },
+
+            virtualNetwork::
+                super.virtualNetwork.withNetworkSecurityGroup(self.networkSecurityGroup),
         },
 
     outputs: {
