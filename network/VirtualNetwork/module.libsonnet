@@ -66,10 +66,4 @@ Module {
             value: [subnet.name for subnet in $.virtualNetwork.properties.subnets],
         },
     }
-} 
-
-{
-    parameters:: {
-        name: 'thevnet'
-    },
 }
