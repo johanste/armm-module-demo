@@ -48,7 +48,12 @@
             assert acceptUnknownParameters || std.length(unknownParameters) == 0 : "Unexpected parameters '%s' received. Expected one of '%s'" % [ unknownParameters, std.objectFieldsAll(metadata) ];
 
             local mergedParameters = parameters {
-                [k] : if k in super then super[k] else if 'defaultValue' in metadata[k] then metadata[k].defaultValue else error "Missing parameter '%s'" % [ k ]
+                local validator = 
+                                if 'validate' in metadata[k] then 
+                                    metadata[k].validate 
+                                else function(val) val,
+
+                [k] : if k in super then validator(super[k]) else if 'defaultValue' in metadata[k] then metadata[k].defaultValue else error "Missing parameter '%s'" % [ k ]
                 for k in std.set(std.objectFieldsAll(parameters) + std.objectFieldsAll(metadata))
             };
             mergedParameters,
